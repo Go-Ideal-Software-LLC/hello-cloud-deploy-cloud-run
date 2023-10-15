@@ -1,0 +1,53 @@
+steps:
+  - name: 'gcr.io/cloud-builders/git'
+    secretEnv: ['SSH_KEY']
+    entrypoint: 'bash'
+    args:
+    - -c
+    - |
+      echo "$$SSH_KEY" >> /root/.ssh/id_rsa
+      chmod 400 /root/.ssh/id_rsa
+      cp known_hosts.github /root/.ssh/known_hosts
+    volumes:
+    - name: 'ssh'
+      path: /root/.ssh
+  - name: gcr.io/cloud-builders/git
+    id: 'fetch-git-repo'
+    entrypoint: bash
+    args:
+    - -c
+    - |
+      git remote set-url origin 'git@github.com:Go-Ideal-Software-LLC/<project-id>'
+      git fetch --unshallow
+    volumes:
+    - name: 'ssh'
+      path: /root/.ssh
+  - name: node:18
+    id: 'npm-install'
+    entrypoint: npm
+    args: ['install']
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-hello-docker-image'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/<project-id>/<project-id>/hello:$BUILD_ID', '-f', 'Dockerfile.hello', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-hello-docker-image'
+    args: ['push', 'us-central1-docker.pkg.dev/<project-id>/<project-id>/hello:$BUILD_ID']
+    waitFor: ['build-hello-docker-image']
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: "deploy-hello-to-dev"
+    entrypoint: 'bash'
+    args:
+    - '-c'
+    - |
+      gcloud deploy releases create release-$(date '+%Y%m%d-%H%M%S') --skaffold-file skaffold.hello.yaml --delivery-pipeline hello-deployment-pipeline --region us-central1 --images hello_app=us-central1-docker.pkg.dev/<project-id>/<project-id>/hello:$BUILD_ID
+    waitFor: ['push-hello-docker-image']
+
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/796283614197/secrets/Github-clone-build-blog/versions/latest
+    env: 'SSH_KEY'
+options:
+  logging: CLOUD_LOGGING_ONLY
+  pool:
+    name: 'projects/go-ideal-software-websites/locations/us-central1/workerPools/go-ideal-software-websites-pp'

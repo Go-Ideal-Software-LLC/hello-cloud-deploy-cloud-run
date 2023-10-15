@@ -1,0 +1,11 @@
+apiVersion: skaffold/v4beta6
+kind: Config
+metadata: 
+  name: hello
+profiles:
+- name: dev
+  manifests:
+    rawYaml:
+    - hello-service.yaml
+deploy:
+  cloudrun: {}

@@ -1,0 +1,44 @@
+apiVersion: deploy.cloud.google.com/v1
+kind: DeliveryPipeline
+metadata:
+  name: hello-deployment-pipeline
+description: hello deployment pipeline
+serialPipeline:
+  stages:
+  - targetId: hello-dev
+    profiles: [dev]
+  # production environment example: 
+  # - targetId: hello-prod
+  #   profiles: [prod]
+---
+
+apiVersion: deploy.cloud.google.com/v1
+kind: Target
+metadata:
+  name: hello
+description: Hello World
+run:
+  location: projects/<project-id>/locations/us-central1
+executionConfigs:
+- defaultPool:
+    serviceAccount: deployer@<project-id>.iam.gserviceaccount.com
+  usages:
+  - RENDER
+  - DEPLOY
+---
+
+# production environment example: 
+
+# apiVersion: deploy.cloud.google.com/v1
+# kind: Target
+# metadata:
+#   name: hello-prod
+# description: Hello World Prod
+# run:
+#   location: projects/<project-id>/locations/us-central1
+# executionConfigs:
+# - defaultPool:
+#     serviceAccount: deployer@<project-id>.iam.gserviceaccount.com
+#   usages:
+#   - RENDER
+#   - DEPLOY
